@@ -1,105 +1,212 @@
-// pages/index.js
-
-import { useState, useRef } from 'react';
-import Head from 'next/head';
+import { useRef, useState, useEffect } from 'react';
 
 export default function Home() {
+  const videoRef = useRef(null);
+  const [volume, setVolume] = useState(1);
+  const [muted, setMuted] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef(null);
 
-  const handlePlayPause = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (isPlaying) {
-      audio.pause();
-    } else {
-      audio.play();
+  // Lista de vídeos disponíveis (arquivos na pasta public)
+  const playlist = [
+    { 
+      title: 'OIIA OIIA', 
+      src: 'W&W - OIIA OIIA (Spinning Cat).mp4',
+      thumbnail: 'maxresdefault.jpg' 
+    },
+    { 
+      title: 'Trolagens do Steve', 
+      src: 'Steve Bullying people for 1 Minute 33 seconds straight.mp4',
+      thumbnail: 'maxresdefault (2).jpg' 
+    },
+    { 
+      title: 'Madagascar', 
+      src: '/MADAGASCAR KSKSKSKS A DreamWorks tava poucas ideias quando fez esses filmes - MELHORES MOMENTOS🤣.mp4',
+      thumbnail: 'maxresdefault (3).jpg' 
     }
+  ];
 
-    setIsPlaying(!isPlaying);
+  const currentVideo = playlist[currentVideoIndex];
+
+  useEffect(() => {
+    const video = videoRef.current;
+    
+    if (!video) return;
+    
+    const handleTimeUpdate = () => setCurrentTime(video.currentTime);
+    const handleLoadedMetadata = () => {
+      setDuration(video.duration);
+      video.volume = volume;
+      video.muted = muted;
+    };
+    
+    const handleEnded = () => {
+      if (currentVideoIndex < playlist.length - 1) {
+        setCurrentVideoIndex(currentVideoIndex + 1);
+      } else {
+        setCurrentVideoIndex(0);
+      }
+      setIsPlaying(true);
+    };
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('ended', handleEnded);
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('ended', handleEnded);
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+    };
+  }, [currentVideoIndex, volume, muted]);
+
+  const handleSeek = (seconds) => {
+    const video = videoRef.current;
+    if (video) {
+      video.currentTime += seconds;
+      setCurrentTime(video.currentTime);
+    }
+  };
+
+  const handleVideoSelect = (index) => {
+    setCurrentVideoIndex(index);
+    setCurrentTime(0);
+    setIsPlaying(true);
+  };
+
+  const handleVolumeChange = (e) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    setMuted(newVolume === 0);
+    videoRef.current.volume = newVolume;
+    videoRef.current.muted = newVolume === 0;
+  };
+
+  const toggleMute = () => {
+    const newMuted = !muted;
+    setMuted(newMuted);
+    videoRef.current.muted = newMuted;
+    if (newMuted) {
+      setVolume(0);
+    } else {
+      setVolume(1);
+    }
+  };
+
+  const handleSliderChange = (e) => {
+    const newTime = parseFloat(e.target.value);
+    setCurrentTime(newTime);
+    videoRef.current.currentTime = newTime;
+  };
+
+  const togglePlayPause = () => {
+    const video = videoRef.current;
+    if (video.paused) {
+      video.play();
+      setIsPlaying(true);
+    } else {
+      video.pause();
+      setIsPlaying(false);
+    }
   };
 
   return (
-    <>
-      <Head>
-        <title>Love Love - Gilsons</title>
-      </Head>
-
+    <div className="container">
       <div className="player-card">
-        <img src="/capa-album.jpeg" alt="Capa da música" className="cover" />
-
-        <h2>Love Love</h2>
-        <p>Gilsons</p>
-
-        <div className="progress-bar">
-          <span>0:00</span>
-          <div className="bar"></div>
-          <span>3:25</span>
+        <h1>{currentVideo.title}</h1>
+        
+        {/* Elemento de vídeo */}
+        <div className="video-container">
+          <video
+            ref={videoRef}
+            src={currentVideo.src}
+            poster={currentVideo.thumbnail}
+            controls={false}
+            autoPlay={isPlaying}
+            onClick={togglePlayPause}
+          />
+          
+          {/* Overlay de controles */}
+          <div className="controls-overlay">
+            <button className="play-btn" onClick={togglePlayPause}>
+              {isPlaying ? '⏸️' : '▶️'}
+            </button>
+          </div>
         </div>
-
+        
+        {/* Controles personalizados */}
         <div className="controls">
-          {/* Botão de voltar */}
-          <button>
-            <svg xmlns="http://www.w3.org/2000/svg" 
-                 width="24" height="24" viewBox="0 0 24 24" 
-                 fill="none" stroke="currentColor" strokeWidth="2" 
-                 strokeLinecap="round" strokeLinejoin="round" 
-                 className="lucide lucide-undo2-icon lucide-undo-2">
-              <path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/>
-            </svg>
-          </button>
-
-          {/* Botão Play/Pause */}
-          <button className="play" onClick={handlePlayPause}>
-            {isPlaying ? (
-              // SVG de PAUSE
-              <svg xmlns="http://www.w3.org/2000/svg" 
-                   width="24" height="24" viewBox="0 0 24 24" 
-                   fill="none" stroke="currentColor" strokeWidth="2" 
-                   strokeLinecap="round" strokeLinejoin="round">
-                <rect x="6" y="4" width="4" height="16"></rect>
-                <rect x="14" y="4" width="4" height="16"></rect>
-              </svg>
-            ) : (
-              // SVG de PLAY
-              <svg xmlns="http://www.w3.org/2000/svg" 
-                   width="24" height="24" viewBox="0 0 24 24" 
-                   fill="none" stroke="currentColor" strokeWidth="2" 
-                   strokeLinecap="round" strokeLinejoin="round" 
-                   className="lucide lucide-play-icon lucide-play">
-                <polygon points="6 3 20 12 6 21 6 3"/>
-              </svg>
-            )}
-          </button>
-
-          {/* Botão de avançar */}
-          <button>
-            <svg xmlns="http://www.w3.org/2000/svg" 
-                 width="24" height="24" viewBox="0 0 24 24" 
-                 fill="none" stroke="currentColor" strokeWidth="2" 
-                 strokeLinecap="round" strokeLinejoin="round" 
-                 className="lucide lucide-redo2-icon lucide-redo-2">
-              <path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/>
-            </svg>
-          </button>
-
-          {/* Botão de volume */}
-          <button>
-            <svg xmlns="http://www.w3.org/2000/svg" 
-                 width="24" height="24" viewBox="0 0 24 24" 
-                 fill="none" stroke="currentColor" strokeWidth="2" 
-                 strokeLinecap="round" strokeLinejoin="round" 
-                 className="lucide lucide-volume2-icon lucide-volume-2">
-              <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/>
-              <path d="M16 9a5 5 0 0 1 0 6"/>
-              <path d="M19.364 18.364a9 9 0 0 0 0-12.728"/>
-            </svg>
-          </button>
+          <div className="time-controls">
+            <button onClick={() => handleSeek(-10)}>⏪ -10s</button>
+            <button onClick={togglePlayPause}>
+              {isPlaying ? '⏸️ Pausar' : '▶️ Reproduzir'}
+            </button>
+            <button onClick={() => handleSeek(10)}>+10s ⏩</button>
+          </div>
+          
+          <div className="progress-bar">
+            <span>{formatTime(currentTime)}</span>
+            <input
+              type="range"
+              min="0"
+              max={duration || 100}
+              step="0.1"
+              value={currentTime}
+              onChange={handleSliderChange}
+              className="progress-slider"
+            />
+            <span>{formatTime(duration)}</span>
+          </div>
+          
+          <div className="volume-controls">
+            <button onClick={toggleMute}>
+              {muted ? '🔇 Mutado' : volume > 0.5 ? '🔊 Alto' : '🔈 Baixo'}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={volume}
+              onChange={handleVolumeChange}
+              className="volume-slider"
+            />
+          </div>
         </div>
-
-        <audio ref={audioRef} src="/Love Love.mp3"></audio>
       </div>
-    </>
+      
+      {/* Lista de vídeos */}
+      <div className="playlist">
+        <h3>Escolha um vídeo:</h3>
+        <div className="video-list">
+          {playlist.map((video, index) => (
+            <div 
+              key={index} 
+              className={`video-item ${currentVideoIndex === index ? 'active' : ''}`}
+              onClick={() => handleVideoSelect(index)}
+            >
+              <img src={video.thumbnail} alt={video.title} />
+              <span>{video.title}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
+}
+
+function formatTime(seconds) {
+  if (isNaN(seconds) || !isFinite(seconds)) return '00:00';
+  const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
 }
